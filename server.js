@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api.js';
-import { initScheduler } from './cron/scheduler.js';
+import { initDb } from './db/database.js';
 
 dotenv.config();
 
@@ -25,9 +25,9 @@ app.get('/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(\`Backend server running on http://localhost:\${PORT}\`);
   
-  // Initialize Cron Jobs
-  initScheduler();
+  // Initialize Database
+  await initDb();
 });
