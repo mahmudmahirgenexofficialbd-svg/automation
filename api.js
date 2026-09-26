@@ -1,6 +1,7 @@
 import express from 'express';
 import { generateContentCalendar, generateImage } from '../services/geminiService.js';
 import { dbRun, dbQuery } from '../db/database.js';
+import { processDailyPosts } from '../cron/scheduler.js';
 
 const router = express.Router();
 
@@ -84,6 +85,22 @@ router.patch('/posts/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update post' });
+  }
+});
+
+// 5. External Cron Trigger Endpoint
+router.post('/cron/run', async (req, res) => {
+  // Simple security check (in production, use a strong secret)
+  const cronSecret = req.headers['authorization'];
+  if (cronSecret !== \`Bearer \${process.env.CRON_SECRET}\`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const result = await processDailyPosts();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to run daily scheduler' });
   }
 });
 
