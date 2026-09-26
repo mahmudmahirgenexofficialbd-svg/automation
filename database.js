@@ -1,27 +1,27 @@
-import sqlite3 from 'sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import pg from 'pg';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { Pool } = pg;
 
-// Using a file-based SQLite database
-const dbPath = path.resolve(__dirname, 'social_automation.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error opening database', err.message);
-  } else {
-    console.log('Connected to the SQLite database.');
-    initDb();
+// Connect to a free PostgreSQL database (e.g. Supabase, Neon)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
   }
 });
 
-function initDb() {
-  db.serialize(() => {
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle client', err);
+});
+
+export async function initDb() {
+  try {
     // Create Posts table
-    db.run(`
+    await pool.query(\`
       CREATE TABLE IF NOT EXISTS posts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         day INTEGER NOT NULL,
         theme TEXT NOT NULL,
         caption TEXT NOT NULL,
@@ -31,39 +31,43 @@ function initDb() {
         status TEXT DEFAULT 'draft',
         platform TEXT,
         post_id TEXT,
-        published_at DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        published_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         error_log TEXT
       )
-    `);
+    \`);
 
-    // Create Settings/Config table (optional, for DB-based config)
-    db.run(`
+    // Create Settings/Config table
+    await pool.query(\`
       CREATE TABLE IF NOT EXISTS config (
         key TEXT PRIMARY KEY,
         value TEXT
       )
-    `);
-  });
+    \`);
+    console.log('Connected to PostgreSQL database and initialized tables.');
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+  }
 }
 
-// Helper methods to interact with DB using Promises
-export const dbQuery = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+// Helper methods to interact with DB
+export const dbQuery = async (sql, params = []) => {
+  const { rows } = await pool.query(sql, params);
+  return rows;
 };
 
-export const dbRun = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve({ id: this.lastID, changes: this.changes });
-    });
-  });
+// Return format similar to sqlite logic we had
+export const dbRun = async (sql, params = []) => {
+  // Replace ? with $1, $2, etc. for Postgres
+  let pgSql = sql;
+  let counter = 1;
+  while(pgSql.includes('?')) {
+    pgSql = pgSql.replace('?', \`$\${counter}\`);
+    counter++;
+  }
+  
+  const result = await pool.query(pgSql, params);
+  return { changes: result.rowCount };
 };
 
-export default db;
+export default pool;
