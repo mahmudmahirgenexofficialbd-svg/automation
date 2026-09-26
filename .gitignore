@@ -1,0 +1,52 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node modules
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Environment variables (CRITICAL: Do not commit your API keys)
+.env
+.env.test
+.env.production
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+backend/social_automation.sqlite
+
+# Uploads and media
+uploads/
+backend/uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
